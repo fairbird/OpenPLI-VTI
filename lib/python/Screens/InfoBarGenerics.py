@@ -16,13 +16,14 @@ from Components.VolumeControl import VolumeControl
 from Components.Sources.StaticText import StaticText
 from EpgSelection import EPGSelection
 from Plugins.Plugin import PluginDescriptor
-
+from Screens.PiGDummy import PiGDummy
+from Screens.SplitScreen import SplitScreen
 from Screen import Screen
 from Screens import ScreenSaver
 from Screens import Standby
 from Screens.ChoiceBox import ChoiceBox
 from Screens.Dish import Dish
-from Screens.EventView import EventViewEPGSelect, EventViewSimple
+from Screens.EventView import EventViewEPGSelect, EventViewSimple, EventViewMovieEvent
 from Screens.InputBox import InputBox
 from Screens.MessageBox import MessageBox
 from Screens.MinuteInput import MinuteInput
@@ -37,15 +38,16 @@ from ServiceReference import ServiceReference, isPlayableForCur
 
 from Tools import Notifications, ASCIItranslit
 from Tools.Directories import fileExists, getRecordingFilename, moveFiles
-
 from enigma import eTimer, eServiceCenter, eDVBServicePMTHandler, iServiceInformation, \
 	iPlayableService, eServiceReference, eEPGCache, eActionMap
 
 from time import time, localtime, strftime
+from os import stat as os_stat, path as os_path, listdir as os_listdir, rename as os_rename
 import os
 from bisect import insort
 from sys import maxint
-
+from Tools.Bytes2Human import bytes2human
+from Tools.MovieInfoParser import getExtendedMovieDescription
 from RecordTimer import RecordTimerEntry, RecordTimer, findSafeRecordPath
 
 # hack alert!
@@ -2012,9 +2014,33 @@ class InfoBarExtensions:
 
 		self["InstantExtensionsActions"] = HelpableActionMap(self, "InfobarExtensions",
 			{
-				"extensions": (self.showExtensionSelection, _("Show extensions...")),
+				"extensions": (self.showExtensionSelection, _("view extensions...")),
+				"vtipanel": (self.openVTIPanel, _("open VTi Panel")),
+				"vtiinfopanel": (self.openVTiInfoPanel, _("show VTi system informations")),
 			}, 1) # lower priority
+		for p in plugins.getPlugins(PluginDescriptor.WHERE_EXTENSIONSINGLE):
+			p(self)
 
+	def openVTIPanel(self):
+		if fileExists("/usr/lib/enigma2/python/Plugins/SystemPlugins/VTIPanel/plugin.pyo"):
+			try:
+				from Plugins.SystemPlugins.VTIPanel.plugin import VTIMainMenu
+				self.session.open(VTIMainMenu)
+			except ImportError:
+				self.session.open(MessageBox, _("The VTi Panel is not installed!\nPlease install it."), type = MessageBox.TYPE_INFO,timeout = 10 )
+		else:
+			self.session.open(MessageBox, _("The VTi Panel is not installed!\nPlease install it."), type = MessageBox.TYPE_INFO,timeout = 10 )
+
+	def openVTiInfoPanel(self):
+		if fileExists("/usr/lib/enigma2/python/Plugins/SystemPlugins/VTIPanel/InfoPanel.pyo"):
+			try:
+				from Plugins.SystemPlugins.VTIPanel.InfoPanel import InfoPanel
+				self.session.open(InfoPanel, self)
+			except ImportError:
+				self.session.open(MessageBox, _("The VTi InfoPanel is not installed!\nPlease install it."), type = MessageBox.TYPE_INFO,timeout = 10 )
+		else:
+			self.session.open(MessageBox, _("The VTI Info Panel is not installed!\nPlease install it."), type = MessageBox.TYPE_INFO,timeout = 10 )
+		
 	def addExtension(self, extension, key = None, type = EXTENSION_SINGLE):
 		self.list.append((type, extension, key))
 
@@ -3388,3 +3414,4 @@ class InfoBarHDMI:
 				self.session.nav.playService(slist.servicelist.getCurrent())
 			else:
 				self.session.nav.playService(self.cur_service)
+

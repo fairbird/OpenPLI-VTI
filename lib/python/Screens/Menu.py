@@ -1,12 +1,14 @@
 from Screen import Screen
 from Screens.ParentalControlSetup import ProtectedScreen
 from Components.Sources.List import List
-from Components.ActionMap import NumberActionMap
+from Components.ActionMap import NumberActionMap, ActionMap
 from Components.Sources.StaticText import StaticText
 from Components.config import configfile
 from Components.PluginComponent import plugins
-from Components.config import config
+from Components.config import config, ConfigDictionarySet, NoSave
 from Components.SystemInfo import SystemInfo
+from Components.Label import Label
+from Plugins.Plugin import PluginDescriptor
 
 from Tools.BoundFunction import boundFunction
 from Tools.Directories import resolveFilename, SCOPE_SKIN
@@ -15,6 +17,8 @@ import xml.etree.cElementTree
 
 from Screens.Setup import Setup, getSetupTitle
 
+
+from Screens.Setup import Setup, getSetupTitle
 # read the menu
 mdom = xml.etree.cElementTree.parse(resolveFilename(SCOPE_SKIN, 'menu.xml'))
 
@@ -192,21 +196,63 @@ class Menu(Screen, ProtectedScreen):
 		# for the skin: first try a menu_<menuID>, then Menu
 		self.skinName = [ ]
 		if menuID is not None:
-			self.skinName.append("menu_" + menuID)
+			if menuID == "vtimain":
+				self.skinName.append("menu_system")
+			else:
+				self.skinName.append("menu_" + menuID)
 		self.skinName.append("Menu")
-		self.menuID = menuID
-		ProtectedScreen.__init__(self)
 
-		# Sort by Weight
-		list.sort(key=lambda x: int(x[3]))
+## VTi function moved from VTiPanel to Menu Screen
+		if config.usage.menu_sort_mode.value == "user" and menuID == "mainmenu":
+			plugin_list = []
+			id_list = []
+			for l in plugins.getPlugins([PluginDescriptor.WHERE_PLUGINMENU ,PluginDescriptor.WHERE_EXTENSIONSMENU, PluginDescriptor.WHERE_EVENTINFO]):
+				l.id = (l.name.lower()).replace(' ','_')
+				if l.id not in id_list:
+					id_list.append(l.id)
+					plugin_list.append((l.name, boundFunction(l.__call__, session), l.id, 200))
+			addlist = config.plugins.vtipanel.menushown.value
+			addlist = addlist.split(',')
+			for entry in plugin_list:
+				if entry[2] in addlist:
+					m_list.append(entry)
 
-		self["menu"] = List(list)
+		self.list = m_list
+
+		if menuID is not None and config.usage.menu_sort_mode.value == "user":
+			self.sub_menu_sort = NoSave(ConfigDictionarySet())
+			self.sub_menu_sort.value = config.usage.menu_sort_weight.getConfigValue(self.menuID, "submenu") or {}
+			idx = 0
+			for x in self.list:
+				entry = list(self.list.pop(idx))
+				m_weight = self.sub_menu_sort.getConfigValue(entry[2], "sort") or entry[3]
+				entry.append(m_weight)
+				self.list.insert(idx, tuple(entry))
+				self.sub_menu_sort.changeConfigValue(entry[2], "sort", m_weight)
+				idx += 1
+			self.full_list = list(m_list)
+
+		if config.usage.menu_sort_mode.value == "a_z":
+			# Sort by Name
+			m_list.sort(key=self.sortByName)
+		elif config.usage.menu_sort_mode.value == "user":
+			self["blue"].setText(_("Edit mode on"))
+			self.hide_show_entries()
+			m_list = self.list
+		else:
+			# Sort by Weight
+			m_list.sort(key=lambda x: int(x[3]))
+		self["menu"] = List(m_list)
+		self["menu"].enableWrapAround = True
+		if config.usage.menu_sort_mode.value == "user":
+			self["menu"].onSelectionChanged.append(self.selectionChanged)
 
 		self["actions"] = NumberActionMap(["OkCancelActions", "MenuActions", "NumberActions"],
 			{
-				"ok": self.okbuttonClick,
-				"cancel": self.closeNonRecursive,
+				"ok": self.keyOk,
+				"cancel": self.keyCancel,
 				"menu": self.closeRecursive,
+				"0": self.resetSortOrder,
 				"1": self.keyNumberGlobal,
 				"2": self.keyNumberGlobal,
 				"3": self.keyNumberGlobal,
@@ -215,15 +261,75 @@ class Menu(Screen, ProtectedScreen):
 				"6": self.keyNumberGlobal,
 				"7": self.keyNumberGlobal,
 				"8": self.keyNumberGlobal,
-				"9": self.keyNumberGlobal
+				"9": self.keyNumberGlobal,
+			})
+
+		if config.usage.menu_sort_mode.value == "user":
+			self["MoveActions"] = ActionMap(["WizardActions"],
+				{
+					"left": self.keyLeft,
+					"right": self.keyRight,
+					"up": self.keyUp,
+					"down": self.keyDown,
+				}, -1
+			)
+
+			self["EditActions"] = ActionMap(["ColorActions"],
+			{
+				"green": self.keyGreen,
+				"yellow": self.keyYellow,
+				"blue": self.keyBlue,
 			})
 
 		a = parent.get("title", "").encode("UTF-8") or None
 		a = a and _(a)
 		if a is None:
 			a = _(parent.get("text", "").encode("UTF-8"))
+		#	ikseong - enter Main menu
+		else:
+			t_history.reset()
+			
 		self["title"] = StaticText(a)
 		self.menu_title = a
+
+		#	ikseong make menu title
+		self["thistory"] = StaticText(t_history.thistory)
+		history_len = len(t_history.thistory)
+		self["title0"] = StaticText('')
+		self["title1"] = StaticText('')
+		self["title2"] = StaticText('')
+		if history_len < 13 :
+			self["title0"] = StaticText(a)
+		elif history_len < 21 :
+			self["title0"] = StaticText('')
+			self["title1"] = StaticText(a)
+		else:
+			self["title0"] = StaticText('')
+			self["title1"] = StaticText('')
+			self["title2"] = StaticText(a)				
+
+#		english title			
+#		if(t_history.thistory ==''):
+#			t_history.thistory = str(etitle) + ' > '
+#		else:
+#			t_history.thistory = t_history.thistory + str(etitle) + ' > '
+
+		if(t_history.thistory ==''):
+			t_history.thistory = str(a) + ' > '
+		else:
+			t_history.thistory = t_history.thistory + str(a) + ' > '
+		#
+		
+	def isProtected(self):
+		if config.ParentalControl.setuppinactive.value:
+			if config.ParentalControl.config_sections.main_menu.value and self.menuID == "mainmenu":
+				return True
+			elif config.ParentalControl.config_sections.configuration.value and self.menuID == "setup":
+				return True
+			elif config.ParentalControl.config_sections.vti_menu.value and self.menuID == "vtimain":
+				return True
+			elif config.ParentalControl.config_sections.standby_menu.value and self.menuID == "shutdown":
+				return True
 
 	def keyNumberGlobal(self, number):
 		print "menu keyNumber:", number
@@ -257,3 +363,4 @@ class MainMenu(Menu):
 	def __init__(self, *x):
 		self.skinName = "Menu"
 		Menu.__init__(self, *x)
+

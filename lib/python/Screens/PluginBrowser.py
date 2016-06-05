@@ -180,15 +180,43 @@ class PluginBrowser(Screen, ProtectedScreen):
 			config.misc.pluginbrowser.plugin_order.save()
 
 	def updateList(self):
+		self.pluginlist = plugins.getPlugins(PluginDescriptor.WHERE_PLUGINMENU)
+		empty_sort_order = len(config.usage.plugin_sort_weight.value) or False
 		self.list = []
-		pluginlist = plugins.getPlugins(PluginDescriptor.WHERE_PLUGINMENU)[:]
-		for x in config.misc.pluginbrowser.plugin_order.value.split(","):
-			plugin = list(plugin for plugin in pluginlist if plugin.path[24:] == x)
-			if plugin:
-				self.list.append(PluginEntryComponent(plugin[0], self.listWidth))
-				pluginlist.remove(plugin[0])
-		self.list = self.list + [PluginEntryComponent(plugin, self.listWidth) for plugin in pluginlist]
+		i = 10
+		for plugin in self.pluginlist:
+			plugin.listweight = config.usage.plugin_sort_weight.getConfigValue(plugin.name.lower(), "sort") or i
+			if self.sort_mode or not config.usage.plugin_sort_weight.getConfigValue(plugin.name.lower(), "hidden"):
+				self.list.append(PluginEntryComponent(plugin))
+			i += 10
+		if config.usage.plugins_sort_mode.value == "a_z" or (not empty_sort_order and config.usage.plugins_sort_mode.value == "user"):
+			self.list.sort(key=lambda p_name : p_name[0].name.lower())
+		elif config.usage.plugins_sort_mode.value == "user":
+			self.list.sort(key=lambda listweight : listweight[0].listweight)
 		self["list"].l.setList(self.list)
+		if fileExists(resolveFilename(SCOPE_PLUGINS, "SystemPlugins/VTIPanel/MyPluginManager.pyo")):
+			if self.sort_mode:
+				self["blue"].setText(_("Edit mode off"))
+				self["red"].setText("")
+				if self.selected_plugin:
+					self["green"].setText(_("Move mode off"))
+				else:
+					self["green"].setText(_("Move mode on"))
+			else:
+				if config.usage.plugins_sort_mode.value == "user":
+					self["blue"].setText(_("Edit mode on"))
+				else:
+					self["blue"].setText("")
+				self["yellow"].setText("")
+				self["red"].setText(_("Manage extensions"))
+				self["green"].setText("")
+			self["SoftwareActions"].setEnabled(True)
+			self["PluginDownloadActions"].setEnabled(False)
+		else:
+			self["red"].setText(_("Remove Plugins"))
+			self["green"].setText(_("Download Plugins"))
+			self["SoftwareActions"].setEnabled(False)
+			self["PluginDownloadActions"].setEnabled(True)
 
 	def delete(self):
 		self.session.openWithCallback(self.PluginDownloadBrowserClosed, PluginDownloadBrowser, PluginDownloadBrowser.REMOVE)
@@ -202,9 +230,9 @@ class PluginBrowser(Screen, ProtectedScreen):
 		self.checkWarnings()
 
 	def openExtensionmanager(self):
-		if fileExists(resolveFilename(SCOPE_PLUGINS, "SystemPlugins/SoftwareManager/plugin.py")):
+		if not self.sort_mode and fileExists(resolveFilename(SCOPE_PLUGINS, "SystemPlugins/VTIPanel/MyPluginManager.pyo")):
 			try:
-				from Plugins.SystemPlugins.SoftwareManager.plugin import PluginManager
+				from Plugins.SystemPlugins.VTIPanel.MyPluginManager import MyPluginManager
 			except ImportError:
 				self.session.open(MessageBox, _("The software management extension is not installed!\nPlease install it."), type = MessageBox.TYPE_INFO,timeout = 10 )
 			else:
@@ -489,3 +517,4 @@ class PluginDownloadBrowser(Screen):
 				list.append(PluginCategoryComponent(x, expandableIcon, self.listWidth))
 		self.list = list
 		self["list"].l.setList(list)
+

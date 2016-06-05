@@ -150,6 +150,31 @@ class MoviePlayer(InfoBarBase, InfoBarShowHide, InfoBarMenu, InfoBarSeek, InfoBa
 	def __init__(self, session, service, slist=None, lastservice=None, infobar=None):
 		Screen.__init__(self, session)
 
+		vtiactions = {
+				"showEPGBar":(self.showEPGBar, _("show service EPGBar...")),
+				"showSingleEPG":(self.showSingleEPG, _("show single service EPG...")),
+				"setPlayMode":(self.setPlayMode, _("change play mode...")),
+				"cancel": (self.moviebar_hide, _("leave movie player...")),
+			}
+		if self.allowPiP:
+			vtiactions.update({"show_hide_pip": (self.showPiP, _("(de)activate Picture in Picture..."))})
+		
+		self["actionsVTi"] = HelpableActionMap(self, "MoviePlayerActionsVTi",vtiactions,-1)
+		
+		self["NumberActions"] = NumberActionMap( [ "NumberActions"],
+			{
+				"1": self.keyNumber,
+				"2": self.keyNumber,
+				"3": self.keyNumber,
+				"4": self.keyNumber,
+				"5": self.keyNumber,
+				"6": self.keyNumber,
+				"7": self.keyNumber,
+				"8": self.keyNumber,
+				"9": self.keyNumber,
+				"0": self.keyNumber,
+			}, -2)
+		
 		self["actions"] = HelpableActionMap(self, "MoviePlayerActions",
 			{
 				"leavePlayer": (self.leavePlayer, _("leave movie player...")),
@@ -533,3 +558,4 @@ class MoviePlayer(InfoBarBase, InfoBarShowHide, InfoBarMenu, InfoBarSeek, InfoBa
 
 	def ref2HumanName(self, ref):
 		return enigma.eServiceCenter.getInstance().info(ref).getName(ref)
+
