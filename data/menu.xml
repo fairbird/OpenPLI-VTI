@@ -22,7 +22,17 @@
 			<item level="0" text="About" entryID="about_screen"><screen module="About"/></item>
 			<item level="2" text="Streaming clients info" entryID="streaming_clients_info_screen"><screen module="StreamingClientsInfo"/></item>
 		</menu>
-
+                <menu level="0" text="VTi" entryID="vti_menu" weight="30">
+			<id val="vtimain"/>
+			<item weight="6" level="0" text="Setup - TV / Radio" entryID="vti_tv_radio"><setup id="vti_tv_radio" /></item>
+			<item weight="8" level="0" text="Setup - Movies" entryID="vti_movies"><setup id="vti_movies" /></item>
+			<item weight="10" level="0" text="Setup - Timer" entryID="vti_timer"><setup id="vti_timer" /></item>
+			<item weight="15" level="0" text="Setup - Timeshift" entryID="vti_timeshift"><setup id="vti_timeshift" /></item>
+			<item weight="30" level="0" text="Setup - Service List" entryID="vti_servicelist"><setup id="vti_servicelist" /></item>
+			<item weight="32" level="0" text="Setup - User Interface" entryID="vti_user_interface"><setup id="vti_user_interface" /></item>
+			<item weight="34" level="0" text="Setup - System" entryID="vti_system_setup"><setup id="vti_system_setup" /></item>
+			<item weight="100" level="0" text="About" entryID="about_screen"><screen module="About" /></item>
+		</menu>
 		<item level="1" text="Plugins" entryID="plugin_selection"><screen module="PluginBrowser" screen="PluginBrowser"/></item>
 		<menu level="0" text="Setup" flushConfigOnClose="1" entryID="setup_selection" >
 			<id val="setup"/>
@@ -86,3 +96,4 @@ self.session.openWithCallback(msgClosed, FactoryReset)
 			<item text="Shutdown" requires="!DeepstandbySupport" entryID="deep_standby"><screen module="Standby" screen="TryQuitMainloop">1</screen></item>
 		</menu>
 </menu>
+
