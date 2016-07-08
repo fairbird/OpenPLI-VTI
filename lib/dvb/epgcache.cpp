@@ -2175,6 +2175,15 @@ void eEPGCache::channel_data::readFreeSatScheduleOtherData( const uint8_t *data)
 }
 #endif
 
+
+// BlackHole
+RESULT eEPGCache::Nab_reset_timer()
+{
+eDebug("[EPGC] Funzione Nab Reset Timer Chiamata.");
+channelLastUpdated.clear();
+return -1;
+}
+
 RESULT eEPGCache::lookupEventTime(const eServiceReference &service, time_t t, const eventData *&result, int direction)
 // if t == -1 we search the current event...
 {
@@ -2629,11 +2638,6 @@ PyObject *eEPGCache::lookupEvent(ePyObject list, ePyObject convertFunc)
 				stime = ::time(0);
 
 			eServiceReference ref(handleGroup(eServiceReference(PyString_AS_STRING(service))));
-			if (ref.type != eServiceReference::idDVB && ref.type != eServiceReference::idServiceMP3)
-			{
-				eDebug("[eEPGCache] service reference for epg query is not valid");
-				continue;
-			}
 
 			// redirect subservice querys to parent service
 			eServiceReferenceDVB &dvb_ref = (eServiceReferenceDVB&)ref;
@@ -4544,3 +4548,4 @@ abort:
 		finishEPG();
 }
 #endif
+
