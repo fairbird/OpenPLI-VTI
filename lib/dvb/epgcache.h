@@ -340,10 +340,6 @@ public:
 	};
 	PyObject *lookupEvent(SWIG_PYOBJECT(ePyObject) list, SWIG_PYOBJECT(ePyObject) convertFunc=(PyObject*)0);
 	PyObject *search(SWIG_PYOBJECT(ePyObject));
-	
-//BlackHole
-        SWIG_VOID(RESULT) Nab_reset_timer();
-//end
 
 	// eServiceEvent are parsed epg events.. it's safe to use them after cache unlock
 	// for use from python ( members: m_start_time, m_duration, m_short_description, m_extended_description )
