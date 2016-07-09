@@ -17,5 +17,4 @@ dist_install_DATA = \
         meteocons.ttf \
         MyriadPro-Regular.otf \
         MyriadPro-Semibold.otf \
-        MyriadPro-SemiboldIt.otf \
-        tuxtxt.otb
+        MyriadPro-SemiboldIt.otf
